@@ -1,0 +1,98 @@
+version: "2.4"
+services:
+  pg-master:
+    image: "bitnami/postgresql:12"
+    cpu_count: 1
+    mem_limit: 256m
+    memswap_limit: 256m
+    expose:
+      - "5432"
+    volumes:
+      - ./data/pg_master:/bitnami/postgresql
+    environment:
+      POSTGRESQL_REPLICATION_MODE: "master"
+      POSTGRESQL_REPLICATION_USER: "repl_user"
+      POSTGRESQL_REPLICATION_PASSWORD: "repl_pass"
+      POSTGRESQL_PASSWORD: "pass"
+      POSTGRESQL_DATABASE: "target_db"
+      POSTGRESQL_SYNCHRONOUS_COMMIT_MODE: "on"
+      POSTGRESQL_NUM_SYNCHRONOUS_REPLICAS: 1
+
+  pg-slave-1:
+    image: "bitnami/postgresql:12"
+    cpu_count: 1
+    mem_limit: 256m
+    memswap_limit: 256m
+    expose:
+      - "5432"
+    volumes:
+      - ./data/pg_slave_1:/bitnami/postgresql
+    depends_on:
+      - pg-master
+    links:
+      - pg-master
+    environment:
+      POSTGRESQL_REPLICATION_MODE: "slave"
+      POSTGRESQL_REPLICATION_USER: "repl_user"
+      POSTGRESQL_REPLICATION_PASSWORD: "repl_pass"
+      POSTGRESQL_MASTER_HOST: "pg-master"
+      POSTGRESQL_MASTER_PORT_NUMBER: "5432"
+#      POSTGRESQL_USERNAME: "user"
+      POSTGRESQL_PASSWORD: "pass"
+
+
+  pg-slave-2:
+    image: "bitnami/postgresql:12"
+    expose:
+      - "5432"
+    volumes:
+      - ./data/pg_slave_2:/bitnami/postgresql
+    depends_on:
+      - pg-master
+    links:
+      - pg-master
+    environment:
+      POSTGRESQL_REPLICATION_MODE: "slave"
+      POSTGRESQL_REPLICATION_USER: "repl_user"
+      POSTGRESQL_REPLICATION_PASSWORD: "repl_pass"
+      POSTGRESQL_MASTER_HOST: "pg-master"
+      POSTGRESQL_MASTER_PORT_NUMBER: "5432"
+#      POSTGRESQL_USERNAME: "user"
+      POSTGRESQL_PASSWORD: "pass"
+
+  pg-lb:
+    image: "bitnami/pgpool:4"
+    cpu_count: 1
+    mem_limit: 256m
+    memswap_limit: 256m
+    ports:
+      - "5555:5432"
+    depends_on:
+      - pg-master
+      - pg-slave-1
+      - pg-slave-2
+    links:
+      - pg-master
+      - pg-slave-1
+      - pg-slave-2
+    healthcheck:
+      test: [ "CMD", "/opt/bitnami/scripts/pgpool/healthcheck.sh" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      # <Index>:<hostname>:<port>:<weight>:<directory>:<flags>
+      PGPOOL_BACKEND_NODES: "0:pg-master:5432:0:pg_master:ALWAYS_PRIMARY|DISALLOW_TO_FAILOVER,1:pg-slave-1:5432:1:pg_slave_1:DISALLOW_TO_FAILOVER,2:pg-slave-2:5432:1:pg_slave_2:DISALLOW_TO_FAILOVER"
+      PGPOOL_ENABLE_LOAD_BALANCING: "yes"
+      PGPOOL_ENABLE_STATEMENT_LOAD_BALANCING: "yes"
+      PGPOOL_POSTGRES_USERNAME: "postgres"
+      PGPOOL_POSTGRES_PASSWORD: "pass"
+      PGPOOL_ADMIN_USERNAME: "pgpool_admin"
+      PGPOOL_ADMIN_PASSWORD: "pgpool_password"
+      PGPOOL_SR_CHECK_USER: "repl_user"
+      PGPOOL_SR_CHECK_PASSWORD: "repl_pass"
+      PGPOOL_ENABLE_LDAP: "no"
+      PGPOOL_HEALTH_CHECK_MAX_RETRIES: 10
+      PGPOOL_ENABLE_LOG_CONNECTIONS: "yes"
+      PGPOOL_ENABLE_LOG_PER_NODE_STATEMENT: "yes"
+      PGPOOL_SR_CHECK_DATABASE: "target_db"

@@ -1,0 +1,16 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+psycopg2-binary = "==2.8.*"
+pypika = "==0.47.*"
+click = "==7.*"
+pytest = "==6.2.*"
+pytest-env = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.9"
