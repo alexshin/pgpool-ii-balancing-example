@@ -71,3 +71,7 @@ pytest ./scripts/opt/tests
 ## Links
 
 - [Pagila](https://github.com/devrimgunduz/pagila) - sample database for Postgres 12+
+- https://www.refurbed.org/posts/load-balancing-sql-queries-using-pgpool/
+- https://www.pgpool.net/docs/latest/en/html/runtime-config-load-balancing.html
+- https://www.pgpool.net/docs/latest/en/html/example-kubernetes.html
+- https://www.youtube.com/watch?v=oc_FQHq2dPI
